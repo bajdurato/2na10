@@ -8,19 +8,19 @@ export const createReducer = (initialState = {}, actionHandlerKeyFuncs = {}) => 
 };
 
 // Creates a basic action
-const createAction = (type, actionProps) => {
+export const createAction = (type, actionProps) => {
   return {
     type,
     ...actionProps
   };
 }
-
+ 
 // e.g. createAsyncActionCreator('GET_TOP_MOVIES', getTopMovies, {page: 1})
 // I admit that passing the asyncRequestFn without params is not ideal, but 
 // wanted to capture the requestParams as part of the start action for logging transparency
 export const createAsyncActionCreator = (actionType, asyncRequestFn, requestParams) => {
   return (dispatch) => {
-    dispatch(createAction(`${actionType}_START`, { request: requestParams }));
+    dispatch(createAction(`${actionType}_START`, {request: requestParams}));
     // NOTE: asyncRequestFn must accept single object parameter
     // in order to resolve param values
     return asyncRequestFn(requestParams)
@@ -29,31 +29,33 @@ export const createAsyncActionCreator = (actionType, asyncRequestFn, requestPara
           .then(json => dispatch(createAction(`${actionType}_SUCCESS`, { response: json })))
           .catch(error => dispatch(createAction(`${actionType}_ERROR`, { error })));
       });
-
+      
   };
 }
 
 // We're setting these based on the state of the request
-const initialAsyncState = { isLoading: false, response: null, request: null };
+const initialAsyncState = { isLoading: false, response: undefined, request: undefined };
 
 // Generic way of handling state changes for an async request
-// Can override {action_type}_START, {action_type}_SUCCESS, {action_type}_ERROR
+// Allowable async reducer overrides are: {action_type}_START, {action_type}_SUCCESS, {action_type}_ERROR
 export const createAsyncReducer = (actionType, actionHandlerKeyFuncs = {}, initialState = initialAsyncState) => {
+  const startReducerOverrideFn = actionHandlerKeyFuncs[`${actionType}_START`];
   const startReducerFn = (state, action) => ({
-    ...state,
-    isLoading: true,
-    request: action.request
+      ...state,
+      isLoading: true,
+      request: action.request
   });
-
-  const successReducerFn = (state, action) => ({
-    ...state,
-    isLoading: false,
-    response: action.response
+  const successReducerOverrideFn = actionHandlerKeyFuncs[`${actionType}_SUCCESS`];
+  const successReducerFn = successReducerOverrideFn ? successReducerOverrideFn : (state, action) => ({
+      ...state,
+      isLoading: false,
+      response: action.response
   });
+  const errorReducerOverrideFn = actionHandlerKeyFuncs[`${actionType}_ERROR`];
   const errorReducerFn = (state, action) => ({
-    ...state,
-    isLoading: false,
-    error: action.error
+      ...state,
+      isLoading: false,
+      error: action.error
   });
 
   return createReducer(
@@ -61,8 +63,7 @@ export const createAsyncReducer = (actionType, actionHandlerKeyFuncs = {}, initi
     {
       [`${actionType}_START`]: startReducerFn,
       [`${actionType}_SUCCESS`]: successReducerFn,
-      [`${actionType}_ERROR`]: errorReducerFn,
-      ...actionHandlerKeyFuncs
+      [`${actionType}_ERROR`]: errorReducerFn
     }
   );
 }
