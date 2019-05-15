@@ -28,7 +28,7 @@ class MovieCardComponent extends React.Component {
       isMouseOver: false
     };
   }
-  
+
   render() {
     const {movie, openMovieModal} = this.props;
     // The CardTitle.subtitle won't render if it's null
